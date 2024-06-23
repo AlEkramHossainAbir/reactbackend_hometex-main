@@ -310,7 +310,7 @@ const AddProduct = () => {
             stock: totalStock,
             shop_ids: shopIds,
         };
-
+        console.log("payload",payload)
         axios
             .post(`${Constants.BASE_URL}/product`, payload, {
                 headers: {
@@ -327,7 +327,7 @@ const AddProduct = () => {
                     toast: true,
                     timer: 1500,
                 });
-                if (res.data.product_id != undefined) {
+                if (res.data.product_id !== undefined) {
                     navigate("/product/photo/" + res.data.product_id);
                 }
             })
@@ -841,30 +841,25 @@ const AddProduct = () => {
                                                                     }
                                                                 />
                                                             </div>
-                                                        ))} */}
+                                                            ))} */}
 
-{
-    data_obj.length > 0 && data_obj.map((shop, index) => {
-        const inputName = `shop_quantity_${shop.value}`;
-        return (
-            <div key={shop.value} className="mb-2">
-                <label>{shop.label} Quantity</label>
-                <input
-                    type="number"
-                    className="form-control"
-                    name={inputName}
-                    value={attribute_input[id]?.shop_quantities?.[shop.value] || ""}
-                    onChange={(e) => handleAttributeInput(e, id)}
-                />
-            </div>
-        );
-    })
-}
-
-
-
-
-
+                                                            {
+                                                                data_obj.length > 0 && data_obj.map((shop, index) => {
+                                                                    const inputName = `shop_quantity_${shop.value}`;
+                                                                    return (
+                                                                        <div key={shop.value} className="mb-2">
+                                                                            <label>{shop.label} Quantity</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                className="form-control"
+                                                                                name={inputName}
+                                                                                value={attribute_input[id]?.shop_quantities?.[shop.value] || ""}
+                                                                                onChange={(e) => handleAttributeInput(e, id)}
+                                                                            />
+                                                                        </div>
+                                                                    );
+                                                                })
+                                                            }
                                                         </div>
                                                         <div className="col-md-2">
                                                             <label className="w-100 mt-4">
