@@ -360,14 +360,16 @@ const ProductEdit = () => {
     const handleProductUpdate = () => {
         setIsLoading(true);
         const token = localStorage.getItem("token");
-        // Create a map of shop quantities for easy access
+    
+         
         const shopQuantityMap = {};
         shops.forEach((shop) => {
             shopQuantityMap[shop.shop_id] = shop.shop_quantity;
         });
-
-        // Update the 'input' data to match the 'shops' data and set shop_quantity equal to quantity
+    
+       
         const updatedInput = { ...input };
+    
         updatedInput.shops = selectedShops.map((selectedShop) => {
             const shopId = selectedShop.value;
             const quantity = quantities[shopId] || 0;
@@ -376,20 +378,29 @@ const ProductEdit = () => {
             }
             return { shop_id: shopId, shop_quantity: quantity };
         });
-
+    
         const updatedShopQuantities = updatedInput.shops.map((shop) => {
             return { shop_id: shop.shop_id, quantity: shop.shop_quantity };
         });
-
-        // Use the updated 'input' data in the payload
+    
+        // Ensure all attribute inputs are included in the payload
+        const attributeEntries = Object.entries(attribute_input).map(([key, value]) => {
+            return {
+                id: key,
+                ...value,
+            };
+        });
+    
         const payload = {
             ...updatedInput,
             shop_quantities: updatedShopQuantities,
             stock: totalStock,
             shop_ids: shopIds,
+            attributes: attributeEntries, // Include the attributes here
         };
-
-
+    
+        console.log("Payload:", payload); // Debugging step to see the full payload
+    
         axios
             .put(`${Constants.BASE_URL}/product/${params.id}`, payload, {
                 headers: {
@@ -420,6 +431,7 @@ const ProductEdit = () => {
                 }
             });
     };
+    
 
     useEffect(() => {
         getAddProductData();
