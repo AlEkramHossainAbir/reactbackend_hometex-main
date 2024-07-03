@@ -13,7 +13,7 @@ const ProductEdit = () => {
     const navigate = useNavigate();
     const params = useParams();
     const [attribute_input, setAttribute_input] = useState({});
-    const [specification_input, setSpecification_input] = useState({});
+    const [specification_input, setSpecification_input] = useState([{ name: '', value: '' }]);
     const [errors, setErrors] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [categories, setCategories] = useState([]);
@@ -39,13 +39,37 @@ const ProductEdit = () => {
     const [attribute_obj, setAttribute_obj] = useState({});
     const [changedAttributes, setChangedAttributes] = useState({});
 
+    
+    
     const handleDescriptionChange = (value) => {
         setInput((prevState) => ({
             ...prevState,
             description: value,
         }));
     };
-
+    // setAttributeField(response.data.data.attributes.map(attr => ({
+    //     ...attr,
+    //     shop_quantities: attr.shop_quantities || []
+    // })));
+    const handleAttributeShopQuantityChange = (attributeId, shopId, quantity) => {
+        setAttributeField((prevState) =>
+            prevState.map((attr) =>
+                attr.id === attributeId
+                    ? {
+                          ...attr,
+                          shop_quantities: attr.shop_quantities.map((sq) =>
+                              sq.shop_id === shopId ? { ...sq, quantity: parseInt(quantity) || 0 } : sq
+                          ),
+                      }
+                    : attr
+            )
+        );
+    };
+    const handleSpecificationChange = (index, field, value) => {
+        const newSpecifications = [...specification_input];
+        newSpecifications[index][field] = value;
+        setSpecification_input(newSpecifications);
+    };
     const getProduct = () => {
         const token = localStorage.getItem("token");
         const config = {
@@ -56,7 +80,7 @@ const ProductEdit = () => {
                 Authorization: `Bearer ${token}`,
             },
         };
-
+    
         axios
             .request(config)
             .then((response) => {
@@ -64,47 +88,38 @@ const ProductEdit = () => {
                 const priceValue = response.data.data.price.replace(/[৳,]/g, "");
                 const shopData = response.data.data.shops;
 
-                // Filter out duplicate shops based on shop_id
+                const transformedSpecifications = response.data.data.specifications.map(spec => ({
+                    name: spec.id,
+                    value: spec.name,
+                }));
+
+                setSpecificationFiled(transformedSpecifications || []);
+                setSpecification_input(transformedSpecifications || []);
+    
+                setAttributeField(response.data.data.attributes.map(attr => ({
+                    ...attr,
+                    shop_quantities: attr.shop_quantities || []
+                })));
+    
                 const uniqueShopData = [];
                 const shopIds = new Set();
-
+    
                 shopData.forEach((shop) => {
                     if (!shopIds.has(shop.shop_id)) {
                         uniqueShopData.push(shop);
                         shopIds.add(shop.shop_id);
                     }
                 });
-                const discountPercentValue = parseFloat(
-                    response.data.data.discount_percent
-                );
-                const discountFixedValue = parseFloat(
-                    response.data.data.discount_fixed
-                );
-                const discountEndDate = response.data.data.discount_end
-                    ? new Date(response.data.data.discount_end)
-                    : null;
-                const formattedDiscountEnd = discountEndDate
-                    ? discountEndDate.toISOString().slice(0, 16)
-                    : null;
-
-                const discountStartDate = response.data.data.discount_start
-                    ? new Date(response.data.data.discount_start)
-                    : null;
-                const formattedDiscountStart = discountStartDate
-                    ? discountStartDate.toISOString().slice(0, 16)
-                    : null;
-
-                const productAttributes = response.data.data.attributes
-                    ? [response.data.data.attributes]
-                    : [];
-
-              
-
-
-                // const productAttributes = response.data.data.attributes
-                //     ? [response.data.data.attributes.id]
-                //     : [];
-
+    
+                const discountPercentValue = parseFloat(response.data.data.discount_percent);
+                const discountFixedValue = parseFloat(response.data.data.discount_fixed);
+                const discountEndDate = response.data.data.discount_end ? new Date(response.data.data.discount_end) : null;
+                const formattedDiscountEnd = discountEndDate ? discountEndDate.toISOString().slice(0, 16) : null;
+                const discountStartDate = response.data.data.discount_start ? new Date(response.data.data.discount_start) : null;
+                const formattedDiscountStart = discountStartDate ? discountStartDate.toISOString().slice(0, 16) : null;
+    
+                const productAttributes = response.data.data.attributes ? [response.data.data.attributes] : [];
+    
                 const shopQuantities = {};
                 uniqueShopData.forEach((shop) => {
                     shopQuantities[shop.shop_id] = shop.shop_quantity;
@@ -136,34 +151,12 @@ const ProductEdit = () => {
                     status: response.data.data.status == "Active" ? 1 : 0,
                 });
                 setAttributes(productAttributes);
-
-
-                // Set the quantities for each shop in the state
                 setQuantities(shopQuantities);
-                // Pre-select shops
-                setSelectedShops(
-                    uniqueShopData.map((shop) => ({
-                        value: shop.shop_id,
-                        label: shop.shop_name,
-                    }))
-                );
-
-
-                // let product_attribute = [];
-                // if (typeof response.data.data.attributes != 'undefined') {
-                //     for (var it = 0; it < response.data.data.attributes.length; it++) {
-                //         product_attribute.push((it + 1))
-                //     }
-                // }
-
-
-        
-
-                setAttributeField(response.data.data.attributes)
-
-
-                setSpecificationFiled(response.data.data.specifications)
-
+                setSelectedShops(uniqueShopData.map((shop) => ({
+                    value: shop.shop_id,
+                    label: shop.shop_name,
+                })));
+                setAttributeField(response.data.data.attributes);
             })
             .catch((error) => {
                 console.error(error);
@@ -187,23 +180,27 @@ const ProductEdit = () => {
         setTotalStock(newTotalStock);
     }, [quantities]);
 
-  
-    const handleSpecificationFieldRemove = (id) => {
-        setSpecificationFiled((oldValues) =>
-            oldValues.filter((specificationFiled) => specificationFiled !== id)
-        );
-        setSpecification_input((current) => {
-            const copy = { ...current };
-            delete copy[id];
-            return copy;
-        });
-        setSpecificationFiledId(specificationFiledId - 1);
+    const handleSpecificationInput = (e, index) => {
+        const { name, value } = e.target;
+        const updatedSpecifications = [...specification_input];
+        updatedSpecifications[index] = { ...updatedSpecifications[index], [name]: value };
+        setSpecification_input(updatedSpecifications);
     };
-
-    const handleSpecificationFields = (id) => {
-        setSpecificationFiledId(specificationFiledId + 1);
+    
+    
+    const handleSpecificationFieldRemove = (index) => {
+        setSpecificationFiled((prevState) => prevState.filter((_, i) => i !== index));
+        setSpecification_input((prevState) => prevState.filter((_, i) => i !== index));
+    };
+    
+    const handleSpecificationFields = () => {
+        setSpecificationFiledId((prevId) => prevId + 1);
         setSpecificationFiled((prevState) => [...prevState, specificationFiledId]);
+        setSpecification_input((prevState) => [...prevState, { name: '', value: '' }]);
     };
+    
+    
+    
 
     const handleAttributeFieldsRemove = (index) => {
         setAttributeField((prevState) => {
@@ -358,17 +355,18 @@ const ProductEdit = () => {
         setQuantities(newQuantities);
     };
 
+    
     const handleProductUpdate = () => {
         setIsLoading(true);
         const token = localStorage.getItem("token");
-    
+
         const shopQuantityMap = {};
         shops.forEach((shop) => {
             shopQuantityMap[shop.shop_id] = shop.shop_quantity;
         });
-    
+
         const updatedInput = { ...input };
-    
+
         updatedInput.shops = selectedShops.map((selectedShop) => {
             const shopId = selectedShop.value;
             const quantity = quantities[shopId] || 0;
@@ -378,37 +376,37 @@ const ProductEdit = () => {
             }
             return { shop_id: shopId, shop_name: shop_name, quantity: quantity };
         });
-    
+
         const updatedShopQuantities = updatedInput.shops.map((shop) => {
             return { shop_id: shop.shop_id, shop_name: shop.shop_name, quantity: shop.quantity };
         });
-    
+
         const attributeEntries = attributeFiled.map((attribute) => {
             return {
-                id: attribute.id,
+                shop_quantities: attributeShopQuantities[attribute.id] || [],
                 attribute_id: attribute.attribute_id,
-                attribute_value_id: attribute_input[attribute.id]?.attribute_value_id || attribute.attribute_value_id,
-                attribute_name: attribute_input[attribute.id]?.attribute_name || attribute.attribute_name,
-                attribute_value: attribute_input[attribute.id]?.attribute_value || attribute.attribute_value,
+                id: attribute.id,
+                value_id: attribute_input[attribute.id]?.attribute_value_id || attribute.attribute_value_id,
                 math_sign: attribute_input[attribute.id]?.math_sign || attribute.math_sign,
                 number: attribute_input[attribute.id]?.number || attribute.number,
-                shop_quantities: attributeShopQuantities[attribute.id] || [],
-                weight: attribute_input[attribute.id]?.weight || attribute.weight,
-                measurement: attribute_input[attribute.id]?.measurement || attribute.measurement,
-                cost: attribute_input[attribute.id]?.cost || attribute.cost,
+                attribute_cost: attribute_input[attribute.id]?.cost || attribute.cost,
+                attribute_weight: attribute_input[attribute.id]?.weight || attribute.weight,
+                attribute_mesarment: attribute_input[attribute.id]?.measurement || attribute.measurement,
             };
         });
-    
+
+        
+
         const payload = {
             ...updatedInput,
             shop_quantities: updatedShopQuantities,
             stock: totalStock,
             shop_ids: shopIds,
             attributes: attributeEntries,
+            specifications: specification_input,
         };
-    
-        console.log("Payload:", payload);
-    
+        console.log(payload)
+
         axios.put(`${Constants.BASE_URL}/product/${params.id}`, payload, {
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -438,8 +436,6 @@ const ProductEdit = () => {
             }
         });
     };
-    
-    
 
     useEffect(() => {
         getAddProductData();
@@ -471,12 +467,21 @@ const ProductEdit = () => {
         setTotalStock(total);
     }, [selectedShops, quantities]);
 
-    const handleAttributeShopChange = (index, selectedOptions) => {
-        setAttributeShopQuantities((prevState) => {
-            const newState = { ...prevState, [index]: selectedOptions };
-            console.log("Updated attributeShopQuantities:", newState);
-            return newState;
-        });
+    const handleAttributeShopChange = (attributeId, selectedOptions) => {
+        setAttributeField((prevState) =>
+            prevState.map((attr) =>
+                attr.id === attributeId
+                    ? {
+                          ...attr,
+                          shop_quantities: selectedOptions.map((option) => ({
+                              shop_id: option.value,
+                              shop_name: option.label,
+                              quantity: 0,
+                          })),
+                      }
+                    : attr
+            )
+        );
     };
     // Sanjib - 
  
@@ -601,8 +606,8 @@ const onChangeAttribute = (e, id, attributeName) => {
                                             <input
                                                 className="form-control mt-2"
                                                 type="number"
-                                                name={`stock_${shop.value}`}
-                                                value={quantities[shop.value] || ""}
+                                                name={`shop_quantity_${shop.shop_id}`}
+                                                value={shop.quantity || ''}
                                                 onChange={(e) => handleQuantityChange(e, shop.value)}
                                                 placeholder={`Enter Product Stock for ${shop.label}`}
                                             />
@@ -863,7 +868,7 @@ const onChangeAttribute = (e, id, attributeName) => {
                                     </label>
                                 </div>
 
-                                <div className="col-md-12">
+                                <div className="row align-items-end">
                                     <div className="card my-4">
                                         <div className="card-header">
                                             <h5>Select Product Attribute</h5>
@@ -945,30 +950,30 @@ const onChangeAttribute = (e, id, attributeName) => {
         </div>
 
         <div className="col-md-2">
-            <label className="w-100 mt-4">
-                <p>Select Shops</p>
-                <Select
-                    options={shops}
-                    isMulti
-                    value={value.shop_quantities?.map(sq => ({ value: sq.shop_id, shop_name: sq.shop_name })) || []}
-                    onChange={(selectedOptions) => handleAttributeShopChange(value.id, selectedOptions)}
-                    className="mb-3"
-                    placeholder="Select Shops"
-                />
-            </label>
-            {value.shop_quantities?.map((shop) => (
-                <div key={shop.shop_id} className="mb-2">
-                    <label>{shop.shop_name} Quantity</label>
-                    <input
-                        type="number"
-                        className="form-control"
-                        name={`shop_quantity_${shop.shop_id}`}
-                        value={shop.quantity || ''}
-                        onChange={(e) => handleAttributeInput(e, value.id)}
-                    />
-                </div>
-            ))}
+    <label className="w-100 mt-4">
+        <p>Select Shops</p>
+        <Select
+            options={shops}
+            isMulti
+            value={value.shop_quantities?.map(sq => ({ value: sq.shop_id, label: sq.shop_name })) || []}
+            onChange={(selectedOptions) => handleAttributeShopChange(value.id, selectedOptions)}
+            className="mb-3"
+            placeholder="Select Shops"
+        />
+    </label>
+    {value.shop_quantities?.map((shop) => (
+        <div key={shop.shop_id} className="mb-2">
+            <label>{shop.shop_name} Quantity</label>
+            <input
+                type="number"
+                className="form-control"
+                name={`shop_quantity_${shop.shop_id}`}
+                value={shop.quantity || ''}
+                onChange={(e) => handleAttributeShopQuantityChange(value.id, shop.shop_id, e.target.value)}
+            />
         </div>
+    ))}
+</div>
 
         <div className="col-md-2">
             <label className="w-100 mt-4">
@@ -982,7 +987,7 @@ const onChangeAttribute = (e, id, attributeName) => {
                 />
             </label>
         </div>
-
+{/* 
         <div className="col-md-2">
             <label className="w-100 mt-4">
                 <p>Product Quantity</p>
@@ -994,7 +999,7 @@ const onChangeAttribute = (e, id, attributeName) => {
                     onChange={(e) => handleAttributeInput(e, value.id)}
                 />
             </label>
-        </div>
+        </div> */}
 
         <div className="col-md-2">
             <label className="w-100 mt-4">
@@ -1010,25 +1015,27 @@ const onChangeAttribute = (e, id, attributeName) => {
         </div>
 
         <div className="col-md-2">
-            <label className="w-100 mt-4">
-                <p>Product Measurement</p>
-                <input
-                    type="text"
-                    className="form-control mt-2"
-                    name="measurement"
-                    value={value.measurement || ''}
-                    onChange={(e) => handleAttributeInput(e, value.id)}
-                />
-            </label>
-        </div>
+        <label className="w-100 mt-4">
+            <p>Product Measurement</p>
+            <input
+                type="text"
+                className="form-control mt-2"
+                name="measurement"
+                value={value.measurement || ''}
+                onChange={(e) => handleAttributeInput(e, value.id)}
+            />
+        </label>
+
+        
+    </div>
 
         <div className="col-md-2">
-            <button
-                className="btn btn-danger mt-5"
-                onClick={() => handleAttributeFieldsRemove(index)}
-            >
-                <i className="fa-solid fa-minus" />
-            </button>
+        <button
+            className="btn btn-danger mt-4"   
+            onClick={() => handleAttributeFieldsRemove(index)}
+        >
+            <i className="fa-solid fa-minus" />
+        </button>
         </div>
     </div>
 ))}
@@ -1039,7 +1046,7 @@ const onChangeAttribute = (e, id, attributeName) => {
             className="btn btn-success mt-3"
             onClick={handleAttributeFields}
         >
-            <i className="fa-solid fa-plus" /> Add Attribute
+            <i className="fa-solid fa-plus" />  
         </button>
     </div>
 </div>
@@ -1060,79 +1067,27 @@ const onChangeAttribute = (e, id, attributeName) => {
                                             <h5>Product Specifications</h5>
                                         </div>
                                         <div className="card-body">
-                                            {specificationFiled.map((id, ind) => (
-                                                <div
-                                                    key={ind}
-                                                    className="row my-2 align-items-baseline"
-                                                >
-                                                    <div className="col-md-5">
-                                                        <label className={"w-100 mt-4"}>
-                                                            <p>Specification Name</p>
-                                                            <input
-                                                                className={"form-control mt-2"}
-                                                                type={"text"}
-                                                                name={"name"}
-                                                                // value={
-                                                                //     specification_input[id] != undefined
-                                                                //         ? specification_input[id].name
-                                                                //         : null
-                                                                // }
-                                                                value={id.name}
-                                                                // onChange={(e) =>
-                                                                //     handleSpecificationInput(e, id)
-                                                                // }
-                                                                placeholder={"Enter Product Specification Name"}
-                                                            />
-                                                            <p className={"login-error-msg"}>
-                                                                <small>
-                                                                    {errors.name != undefined
-                                                                        ? errors.name[0]
-                                                                        : null}
-                                                                </small>
-                                                            </p>
-                                                        </label>
-                                                    </div>
-                                                    <div className="col-md-5">
-                                                        <label className={"w-100 mt-4"}>
-                                                            <p>Specification Value</p>
-                                                            <input
-                                                                className="form-control mt-2"
-                                                                type={"text"}
-                                                                name={"value"}
-                                                                // value={
-                                                                //     specification_input[id] != undefined
-                                                                //         ? specification_input[id].value
-                                                                //         : null
-                                                                // }
-                                                                // onChange={(e) =>
-                                                                //     handleSpecificationInput(e, id)
-                                                                // }
-                                                                value={id.value}
-                                                                placeholder={"Enter Product Specification Name"}
-                                                            />
-                                                            <p className={"login-error-msg"}>
-                                                                <small>
-                                                                    {errors.name != undefined
-                                                                        ? errors.name[0]
-                                                                        : null}
-                                                                </small>
-                                                            </p>
-                                                        </label>
-                                                    </div>
-                                                    <div className="col-md-2">
-                                                        {specificationFiled.length - 1 == ind ? (
-                                                            <button
-                                                                className={"btn btn-danger"}
-                                                                onClick={() =>
-                                                                    handleSpecificationFieldRemove(id)
-                                                                }
-                                                            >
-                                                                <i className="fa-solid fa-minus" />
-                                                            </button>
-                                                        ) : null}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                         
+                                        <div>
+                {specification_input.map((spec, index) => (
+                    <div key={index}>
+                        <input
+                            type="text"
+                            placeholder="Name"
+                            value={spec.name}
+                            onChange={(e) => handleSpecificationChange(index, 'name', e.target.value)}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Value"
+                            value={spec.value}
+                            onChange={(e) => handleSpecificationChange(index, 'value', e.target.value)}
+                        />
+                    </div>
+                ))}
+            </div>
+{/* <button onClick={handleSpecificationFields}>Add Specification</button> */}
+
 
                                             <div className="row">
                                                 <div className="col-md-12 text-center">
