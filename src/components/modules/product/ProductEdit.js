@@ -89,8 +89,8 @@ const ProductEdit = () => {
                 const shopData = response.data.data.shops;
 
                 const transformedSpecifications = response.data.data.specifications.map(spec => ({
-                    value: spec.value,
-                    name: spec.name,
+                    name: spec.id,
+                    value: spec.name,
                 }));
 
                 setSpecificationFiled(transformedSpecifications || []);
@@ -236,13 +236,13 @@ const ProductEdit = () => {
                 id: null,
                 isNew: true,  // Mark this attribute as new
                 attribute_id: '',
-                value_id: '',
+                attribute_value_id: '',
                 attribute_value: '',
                 math_sign: '',
                 number: '',
-                attribute_cost: '',
-                attribute_weight: '',
-                attribute_mesarment: '',
+                cost: '',
+                weight: '',
+                measurement: '',
                 shop_quantities: []
             }];
         });
@@ -405,13 +405,16 @@ const ProductEdit = () => {
             return {
                 attribute_id: attribute.attribute_id,
                 id: attribute.id,
-                value_id: attribute_input[attribute.id]?.value_id || attribute.value_id,
+                value_id: attribute_input[attribute.id]?.attribute_value_id || attribute.attribute_value_id,
                 math_sign: attribute_input[attribute.id]?.math_sign || attribute.math_sign,
                 number: attribute_input[attribute.id]?.number || attribute.number,
-                attribute_cost: attribute_input[attribute.id]?.attribute_cost || attribute.attribute_cost,
-                attribute_weight: attribute_input[attribute.id]?.attribute_weight || attribute.attribute_weight,
-                attribute_mesarment: attribute_input[attribute.id]?.attribute_mesarment || attribute.attribute_mesarment,
-                shop_quantities: updatedShopQuantities,
+                attribute_cost: attribute_input[attribute.id]?.cost || attribute.cost,
+                attribute_weight: attribute_input[attribute.id]?.weight || attribute.weight,
+                attribute_mesarment: attribute_input[attribute.id]?.measurement || attribute.measurement,
+                shop_quantities: attribute.shop_quantities.reduce((acc, sq) => {
+                    acc[sq.shop_id] = sq.quantity;
+                    return acc;
+                }, {}),
             };
         });
 
@@ -473,8 +476,6 @@ const ProductEdit = () => {
         }));
     }, [specification_input]);
 
-    console.log(specification_input);
-
     const handleMulipleSelect = (e) => {
         let value = [];
         for (const item of e) {
@@ -513,7 +514,6 @@ const ProductEdit = () => {
     attributesAll.length > 0 && attributesAll.map((val, ind) => {
         attribute_obj[val.id] = val.value;
     })
-
     const onChangeArrtibute = (e, id, attributeName) => {
         const { name, value } = e.target;
         console.log("onChangeArrtibute called with id:", id, "name:", name, "value:", value, "attributeName:", attributeName);
@@ -897,8 +897,8 @@ const onChangeAttribute = (e, id, attributeName) => {
                                 <p>Select Attribute Value</p>
                                 <select
                                     className="form-select"
-                                    name="value_id"
-                                    value={value.value_id || ''}
+                                    name="attribute_value_id"
+                                    value={value.attribute_value_id || ''}
                                     onChange={(e) => handleAttributeInput(e, value.id, e.target.options[e.target.selectedIndex].text)}
                                 >
                                     <option value="">Select Attribute Value</option>
@@ -911,7 +911,7 @@ const onChangeAttribute = (e, id, attributeName) => {
                             </label>
                         </div>
 
-                        <div className="col-md-3">
+                        <div className="col-md-2">
                             <label className="w-100">
                                 <p>Select Mathematical Sign</p>
                                 <select 
@@ -929,7 +929,7 @@ const onChangeAttribute = (e, id, attributeName) => {
                             </label>
                         </div>
 
-                        <div className="col-md-3">
+                        <div className="col-md-2">
                             <label className="w-100">
                                 <p>Enter amount</p>
                                 <input
@@ -942,7 +942,7 @@ const onChangeAttribute = (e, id, attributeName) => {
                             </label>
                         </div>
 
-                        <div className="col-md-3">
+                        <div className="col-md-2">
                             <label className="w-100">
                                 <p>Select Shops</p>
                                 <Select
@@ -968,27 +968,14 @@ const onChangeAttribute = (e, id, attributeName) => {
                             ))}
                         </div>
 
-                        <div className="col-md-3">
+                        <div className="col-md-2">
                             <label className="w-100">
                                 <p>Product Cost</p>
                                 <input
                                     type="number"
                                     className="form-control"
-                                    name="attribute_cost"
-                                    value={value.attribute_cost || ''}
-                                    onChange={(e) => handleAttributeInput(e, value.id)}
-                                />
-                            </label>
-                        </div>
-
-                        <div className="col-md-3">
-                            <label className="w-100">
-                                <p>Product Weight (Gram)</p>
-                                <input
-                                    type="number"
-                                    className="form-control"
-                                    name="attribute_weight"
-                                    value={value.attribute_weight || ''}
+                                    name="cost"
+                                    value={value.cost || ''}
                                     onChange={(e) => handleAttributeInput(e, value.id)}
                                 />
                             </label>
@@ -996,27 +983,42 @@ const onChangeAttribute = (e, id, attributeName) => {
 
                         <div className="col-md-2">
                             <label className="w-100">
-                                <p>Product Mesarment</p>
+                                <p>Product Weight (Gram)</p>
                                 <input
-                                    type="text"
+                                    type="number"
                                     className="form-control"
-                                    name="attribute_mesarment"
-                                    value={value.attribute_mesarment || ''}
+                                    name="weight"
+                                    value={value.weight || ''}
                                     onChange={(e) => handleAttributeInput(e, value.id)}
                                 />
                             </label>
                         </div>
 
-                        <div className="col-md-1 mt-4">
-                            {value.shop_quantities== '' && (
-                                <button
-                                    className="btn btn-danger"
-                                    onClick={() => handleAttributeFieldsRemove(index)}
-                                >
-                                    <i className="fa-solid fa-minus" /> 
-                                </button>
-                            )}
+                        <div className="col-md-2">
+                            <label className="w-100">
+                                <p>Product Measurement</p>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    name="measurement"
+                                    value={value.measurement || ''}
+                                    onChange={(e) => handleAttributeInput(e, value.id)}
+                                />
+                            </label>
                         </div>
+
+                        <div className="col-md-2 mt-4">
+                        {(value.id === undefined || value.id === null || value.isNew) && (
+                            <button
+                                className="btn btn-danger"
+                                onClick={() => handleAttributeFieldsRemove(index)}
+                            >
+                                <i className="fa-solid fa-minus" /> 
+                            </button>
+                        )}
+                    </div>
+
+
 
                     </div>
                 </div>
