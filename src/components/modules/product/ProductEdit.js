@@ -231,10 +231,9 @@ const ProductEdit = () => {
     
     const handleAttributeFields = () => {
         setAttributeField((prevState) => {
-            const newId = Math.max(...prevState.map(attr => attr.id || 0), 0) + 1;
+            const newId = Math.max(...prevState.map(attr => attr.id), 0) + 1;
             return [...prevState, {
-                id: null,
-                isNew: true,  // Mark this attribute as new
+                id: newId,
                 attribute_id: '',
                 attribute_value_id: '',
                 attribute_value: '',
@@ -247,7 +246,6 @@ const ProductEdit = () => {
             }];
         });
     };
-    
     
 
     const handleAttributeInput = (e, id, attributeName, index) => {
@@ -399,10 +397,13 @@ const ProductEdit = () => {
             return { shop_id: shopId, shop_name: shop_name, quantity: quantity };
         });
 
-       
+        const updatedShopQuantities = updatedInput.shops.map((shop) => {
+            return { shop_id: shop.shop_id, shop_name: shop.shop_name, quantity: shop.quantity };
+        });
 
         const attributeEntries = attributeFiled.map((attribute) => {
             return {
+                // shop_quantities: attributeShopQuantities[attribute.id] || [],
                 attribute_id: attribute.attribute_id,
                 id: attribute.id,
                 value_id: attribute_input[attribute.id]?.attribute_value_id || attribute.attribute_value_id,
@@ -563,7 +564,37 @@ const onChangeAttribute = (e, id, attributeName) => {
         )
     );
 };
-    
+    const onChangeAmount = (e, id) => {
+        const { name, value } = e.target;
+        
+        setAttributeField((prevState) => {
+            const newState = prevState.map((item) => (item.id === id ? { ...item, [name]: value } : item));
+            return newState;
+        });
+
+        setAttribute_input((prevState) => {
+            const newState = {
+                ...prevState,
+                [id]: {
+                    ...prevState[id],
+                    [name]: value,
+                },
+            };
+            return newState;
+        });
+
+        setChangedAttributes((prevState) => {
+            const newState = {
+                ...prevState,
+                [id]: {
+                    ...prevState[id],
+                    [name]: value,
+                },
+            };
+            return newState;
+        });
+    };
+
     
 
 
