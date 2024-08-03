@@ -22,6 +22,10 @@ const ProductList = () => {
   const [startFrom, setStartFrom] = useState(1);
   const [productColumns, setProductColumns] = useState([]);
   const [duplicateMessage, setDuplicateMessage] = useState("");
+ const [allProducts, setAllProducts] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
 
   const handleInput = (e) => {
     setInput((prevState) => ({
@@ -43,15 +47,22 @@ const ProductList = () => {
         }
       )
       .then((res) => {
-        setProducts(res.data.data);
+        setAllProducts(res.data.data);
+        setTotalPages(Math.ceil(res.data.data.length / productsPerPage));
         setIsLoading(false);
       })
       .catch((error) => {
         console.log(error);
-        // handle error here, e.g. set an error state or display an error message
+  
       });
   };
-
+  
+  const paginateProducts = () => {
+    const indexOfLastProduct = currentPage * productsPerPage;
+    const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+    return allProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+  };
+  
   const getProductColumns = () => {
     const token = localStorage.getItem("token");
     axios
@@ -140,8 +151,8 @@ const ProductList = () => {
 
   useEffect(() => {
     getProducts();
-    getProductColumns();
-  }, []);
+  }, [input]);
+   
 
   const handleGenerateBarcode = (product) => {
     navigate(`/generate-bar-code`, { state: { productSKU: product?.sku } });
@@ -252,10 +263,11 @@ const ProductList = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.keys(products).length > 0 ? (
-                        products.map((product, number) => (
-                          <tr key={number}>
-                            <td>{startFrom + number}</td>
+
+                       {paginateProducts().length > 0 ? (
+                          paginateProducts().map((product, number) => (
+                            <tr key={number}>
+                              <td>{startFrom + number}</td>
                             <td>
                               <p className={"text-theme"}>
                                 Name: {product.name}
@@ -409,6 +421,23 @@ const ProductList = () => {
                       )}
                     </tbody>
                   </table>
+                  <div className="pagination">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </button>
+                    <span>Page {currentPage} of {totalPages}</span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </button>
+                  </div>
+
+
                 </div>
               )}
             </div>

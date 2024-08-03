@@ -2,5 +2,8 @@
     "emmet.includeLanguages": {
         "javascript": "javascriptreact",
         "vue-html": "html"
-    }
+    },
+    "githubPullRequests.ignoredPullRequestBranches": [
+        "main"
+    ]
 }
