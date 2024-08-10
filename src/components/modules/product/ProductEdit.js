@@ -61,6 +61,18 @@ const ProductEdit = () => {
                     : attr
             )
         );
+        // Update changedAttributes to reflect the quantity change
+        setChangedAttributes(prevState => ({
+            ...prevState,
+            [attributeId]: {
+                ...prevState[attributeId],
+                shop_quantities: prevState[attributeId]?.shop_quantities?.map(sq =>
+                    sq.shop_id === shopId ? { ...sq, quantity: parseInt(quantity) || 0 } : sq
+                ) || []
+            }
+        }));
+    
+
     };
     const handleSpecificationChange = (index, field, value) => {
         const newSpecifications = [...specification_input];
@@ -377,31 +389,26 @@ const ProductEdit = () => {
     const handleProductUpdate = () => {
         setIsLoading(true);
         const token = localStorage.getItem("token");
-
-        const shopQuantityMap = {};
-        shops.forEach((shop) => {
-            shopQuantityMap[shop.shop_id] = shop.shop_quantity;
-        });
-
+        
+        const updatedAttributes = attributeFiled.map(attr => ({
+            ...attr,
+            shop_quantities: attr.shop_quantities.map(sq => ({
+                shop_id: sq.shop_id,
+                quantity: sq.quantity
+            }))
+        }));
+    
         const updatedInput = { ...input };
-
+    
         updatedInput.shops = selectedShops.map((selectedShop) => {
             const shopId = selectedShop.value;
             const quantity = quantities[shopId] || 0;
             const shop_name = selectedShop.label;
-            if (shopQuantityMap.hasOwnProperty(shopId)) {
-                shopQuantityMap[shopId] = quantity;
-            }
             return { shop_id: shopId, shop_name: shop_name, quantity: quantity };
         });
-
-        const updatedShopQuantities = updatedInput.shops.map((shop) => {
-            return { shop_id: shop.shop_id, shop_name: shop.shop_name, quantity: shop.quantity };
-        });
-
-        const attributeEntries = attributeFiled.map((attribute) => {
+    
+        const attributeEntries = updatedAttributes.map((attribute) => {
             return {
-                // shop_quantities: attributeShopQuantities[attribute.id] || [],
                 attribute_id: attribute.attribute_id,
                 id: attribute.id,
                 value_id: attribute_input[attribute.id]?.value_id || attribute.value_id,
@@ -410,25 +417,26 @@ const ProductEdit = () => {
                 attribute_cost: attribute_input[attribute.id]?.attribute_cost || attribute.attribute_cost,
                 attribute_weight: attribute_input[attribute.id]?.attribute_weight || attribute.attribute_weight,
                 attribute_mesarment: attribute_input[attribute.id]?.attribute_mesarment || attribute.attribute_mesarment,
-                shop_quantities: updatedShopQuantities,
+                shop_quantities: attribute.shop_quantities,
             };
         });
-
+    
+        console.log("Data being sent to backend:", updatedAttributes);
+    
         // Add information about deleted attributes
         const deletedAttributes = Object.keys(changedAttributes)
             .filter(id => changedAttributes[id].deleted)
             .map(id => ({ id, deleted: true }));
-
+    
         const payload = {
             ...updatedInput,
-
             stock: totalStock,
             shop_ids: shopIds,
             attributes: [...attributeEntries, ...deletedAttributes],
             specifications: specification_input,
         };
-        console.log(payload)
-
+        console.log(payload);
+    
         axios.put(`${Constants.BASE_URL}/product/${params.id}`, payload, {
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -458,7 +466,7 @@ const ProductEdit = () => {
                 }
             });
     };
-
+    
     useEffect(() => {
         getAddProductData();
     }, []);
@@ -645,7 +653,7 @@ const ProductEdit = () => {
                                                 type="number"
                                                 name={`shop_quantity_${shop.shop_id}`}
                                                 value={shop.quantity || ''}
-                                                onChange={(e) => handleQuantityChange(e, shop.value)}
+                                                onChange={(e) => handleQuantityChange(e, shop.value,e.target.value)}
                                                 placeholder={`Enter Product Stock for ${shop.label}`}
                                             />
                                         </label>
