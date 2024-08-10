@@ -333,7 +333,23 @@ const ProductEdit = () => {
     };
 
     const shopIds = shop_quantities.map((item) => item.shop_id);
-
+    
+    useEffect(() => {
+        if (input.category_id) {
+            const sub_category = allSubcategories.filter(
+                (item) => item.category_id == input.category_id
+            );
+            setSubCategories(sub_category);
+        }
+    
+        if (input.sub_category_id) {
+            const child_sub_category = allChildSubcategories.filter(
+                (item) => item.sub_category_id == input.sub_category_id
+            );
+            setChildSubCategories(child_sub_category);
+        }
+    }, [input.category_id, input.sub_category_id]);
+    
 
     const handleInput = (e) => {
         if (e.target.name === "name") {
@@ -366,10 +382,7 @@ const ProductEdit = () => {
             ...prevState,
             [e.target.name]: e.target.value,
         }));
-        setInput((prevState) => ({
-            ...prevState,
-            [e.target.name]: e.target.value,
-        }));
+        
     };
 
 
@@ -778,7 +791,7 @@ const ProductEdit = () => {
                                                     : "form-select mt-2"
                                             }
                                             name={"child_sub_category_id"}
-                                            value={input.child_sub_category_id}
+                                            value={input.child_sub_category_id || ""}
                                             onChange={handleInput}
                                             placeholder={"Select product child sub category"}
                                         >
