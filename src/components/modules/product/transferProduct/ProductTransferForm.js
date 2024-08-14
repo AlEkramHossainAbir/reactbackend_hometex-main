@@ -77,6 +77,7 @@ const ProductTransferForm = () => {
     axios
       .request(config)
       .then((response) => {
+        console.log(response.data);
         setProduct(response.data.data);
       })
       .catch((error) => {
@@ -133,6 +134,25 @@ const ProductTransferForm = () => {
                       onChange={handleInputChange}
                     >
                       <option value="">Select a shop</option>
+                      {product.shops &&
+                        product.shops.map((shop) => (
+                          <option key={shop.shop_id} value={shop.shop_id}>
+                            {shop.shop_name} - Available Quantity:{" "}
+                            {shop.shop_quantity}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="to_shop_id">Attribute:</label>
+                    <select
+                      className="form-control"
+                      id="to_attribute_id"
+                      name="to_attribute_id"
+                      value={formData.to_shop_id}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select attribute</option>
                       {product.shops &&
                         product.shops.map((shop) => (
                           <option key={shop.shop_id} value={shop.shop_id}>
